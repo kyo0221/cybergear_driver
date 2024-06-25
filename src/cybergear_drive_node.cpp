@@ -12,7 +12,7 @@ velocity_limit(get_parameter("velocity_limit").as_double()),
 current_limit(get_parameter("current_limit").as_double()),
 torque_limit(get_parameter("torque_limit").as_double()),
 rotate_ratio(1.0 / get_parameter("reduction_ratio").as_double()),
-is_reverse_flag(get_parameter("reverse_left_flag").as_bool()),
+is_reverse_flag(get_parameter("reverse_flag").as_bool()),
 position_kp(get_parameter("position_kp").as_double()),
 velocity_kp(get_parameter("velocity_kp").as_double()),
 {
