@@ -3,7 +3,6 @@
 using namespace utils;
 
 namespace cybergear_driver{
-
 CyberGearDriver::CyberGearDriver(const rclcpp::NodeOptions& options) : CyberGearDriver("", options) {}
 
 CyberGearDriver::CyberGearDriver(const std::string& name_space, const rclcpp::NodeOptions& options)
@@ -13,6 +12,7 @@ velocity_limit(get_parameter("velocity_limit").as_double()),
 current_limit(get_parameter("current_limit").as_double()),
 torque_limit(get_parameter("torque_limit").as_double()),
 rotate_ratio(1.0 / get_parameter("reduction_ratio").as_double()),
+is_reverse_flag(get_parameter("reverse_left_flag").as_bool()),
 position_kp(get_parameter("position_kp").as_double()),
 velocity_kp(get_parameter("velocity_kp").as_double()),
 {
@@ -53,7 +53,7 @@ void CyberGearDriver::_publisher_callback(){
         vel = msg;
     }
     if(vel == nullptr) return;
-    send_rpm(vel->z);
+    send_rpm(vel->x);
 }
 
 void CyberGearDriver::_subscriber_callback_stop(const std_msgs::msg::Empty::SharedPtr msg){
@@ -81,7 +81,8 @@ void CyberGearDriver::_subscriber_callback_velocity
 
 void CyberGearDriver::send_rpm(const double angular_vel){
     const double vel = angular_vel;
-    const double rpm = (is_reverse_ ? -1 : 1) * (vel*30 / d_pi) * rotate_ratio;
+ 
+    const double rpm = (is_reverse_flag ? -1 : 1) * (vel*30 / d_pi) * rotate_ratio;
 
     auto msg_can = std::make_shared<socketcan_interface_msg::msg::SoketcanIF>();
     msg_can->canid = // 適切なcan idに変更
