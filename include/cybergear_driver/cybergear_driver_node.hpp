@@ -17,7 +17,6 @@ private:
     rclcpp::Subscription<socketcan_interface_msg::msg::SocketcanIF>::SharedPtr _subscription_emergency;
 
     const int interval_ms;
-    const double wheel_radius;
     const double rotate_ratio;
     const bool is_reverse_flag;
 
