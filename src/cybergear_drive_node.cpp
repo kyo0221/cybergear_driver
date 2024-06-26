@@ -8,13 +8,8 @@ CyberGearDriver::CyberGearDriver(const rclcpp::NodeOptions& options) : CyberGear
 CyberGearDriver::CyberGearDriver(const std::string& name_space, const rclcpp::NodeOptions& options)
 : rclcpp::Node("cybergear_driver_node", name_space, options),
 interval_ms(get_parameter("interval_ms").as_int()),
-velocity_limit(get_parameter("velocity_limit").as_double()),
-current_limit(get_parameter("current_limit").as_double()),
-torque_limit(get_parameter("torque_limit").as_double()),
-rotate_ratio(1.0 / get_parameter("reduction_ratio").as_double()),
+rotate_ratio(1.0 / get_parameter("gear_ratio").as_double()),
 is_reverse_flag(get_parameter("reverse_flag").as_bool()),
-position_kp(get_parameter("position_kp").as_double()),
-velocity_kp(get_parameter("velocity_kp").as_double()),
 {
     _subscription_stop = this->create_subscription<std::msgs::msg::Empty>(
         "stop",
@@ -26,6 +21,12 @@ velocity_kp(get_parameter("velocity_kp").as_double()),
         _qos,
         std::bind(&CyberGearDriver::_subscriber_callback_restart)
     );
+    _subscription_position = this->cteate_subscription<cybergear_msgs::msg::CyberhearState>(
+        "cybergear_state",
+        _qos,
+        std::bind(&CyberGearDriver::_subscriber_callback_position)
+    )
+
     _subscription_rpm = this->create_subscription<socketcan_interface_msg::msg::SocketcanIF>(
         "can_rx_711",
         _qos,
@@ -46,23 +47,16 @@ velocity_kp(get_parameter("velocity_kp").as_double()),
 }
 
 void CyberGearDriver::_publisher_callback(){
-    if(mode == Mode::stop || mode == Mode::stay){
-        this->send_rpm(0.0, 0.0);
-        return;
-
-        vel = msg;
-    }
-    if(vel == nullptr) return;
-    send_rpm(vel->x);
+  
 }
 
 void CyberGearDriver::_subscriber_callback_stop(const std_msgs::msg::Empty::SharedPtr msg){
     mode = Mode::stop;
-    RCLCPP_INFO(this->get_logger(), "停止");
+    // RCLCPP_INFO(this->get_logger(), "停止");
 }
 void CyberGearDriver::_subscriber_callback_restart(const std_msgs::msg::Empty::SharedPtr msg){
     mode = Mode::stay;
-    RCLCPP_INFO(this->get_logger(), "再稼働");
+    // RCLCPP_INFO(this->get_logger(), "再稼働");
 }
 void CyberGearDriver::_subscriber_callback_emergency(const socketcan_interface_msg::msg::SocketcanIF::SharedPtr msg){
     uint8_t _candata[8];
@@ -70,26 +64,23 @@ void CyberGearDriver::_subscriber_callback_emergency(const socketcan_interface_m
 
     if(_candata[6] and mode!=Mode::stop){
         mode = Mode::stop;
-        RCLCPP_INFO(this->get_logger(), "緊急停止!");
+        // RCLCPP_INFO(this->get_logger(), "緊急停止!");
     }
 }
-void CyberGearDriver::_subscriber_callback_position(const std_msgs::msg::Empty::SharedPtr msg){
-    mode = Mode::position;
-    RCLCPP_INFO(this->get_logger(), "位置制御")
-}
-void CyberGearDriver::_subscriber_callback_velocity
 
 void CyberGearDriver::send_rpm(const double angular_vel){
-    const double vel = angular_vel;
- 
-    const double rpm = (is_reverse_flag ? -1 : 1) * (vel*30 / d_pi) * rotate_ratio;
-
     auto msg_can = std::make_shared<socketcan_interface_msg::msg::SoketcanIF>();
-    msg_can->canid = // 適切なcan idに変更
-    msg_can->candlc = // ?
+    msg_can->canid = 0x00;
+    msg_can->candlc = 0x7F;
 
-    uint8_t _candata[4];
-    int_to_bytes(_candata, static_cast<int>(rpm));
+    int32_t pos = static_cost<int32_t>((is_reverce_flag ? -1 : 1) * position * gear_ratio);
+    int16_t vel = static_cost<int16_t>((is_reverce_flag ? -1 : 1) * velocity * gear_ratio);
+    int16_t tor = static_cost<int16_t>(torque);
+
+    uint8_t _candata[8];
+    int_to_bytes(_candata, pos);
+    int_to_bytes(_candata, vel);
+    int_to_bytes(_candata, tor);
 
     for(int i=0; i<msg_can->candlc; i++) msg_can->candata[i]=_candata[i];
     piblisher_can->publish(*msg_can);
