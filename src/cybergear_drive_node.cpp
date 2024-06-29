@@ -47,7 +47,10 @@ is_reverse_flag(get_parameter("reverse_flag").as_bool()),
 }
 
 void CyberGearDriver::_publisher_callback(){
-  
+    if(mode == Mode::stop || mode == Mode::stay){
+        vel = 0;
+        tor = 0;
+    }
 }
 
 void CyberGearDriver::_subscriber_callback_stop(const std_msgs::msg::Empty::SharedPtr msg){
